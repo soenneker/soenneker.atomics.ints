@@ -1,26 +1,25 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Threading;
+using Soenneker.Atomics.ValueInts;
 
 namespace Soenneker.Atomics.Ints;
 
 /// <summary>
-/// A lightweight, allocation-free atomic <see cref="int"/> backed by <see cref="Volatile"/> and
-/// <see cref="Interlocked"/> operations.
-/// <para/>
-/// Intended for use as a private field / inline synchronization primitive. Because this is a mutable
-/// <see langword="struct"/>, avoid copying it (e.g., returning it from properties or storing it in collections
-/// where it may be copied by value).
+/// A lightweight atomic <see cref="int"/> wrapper implemented as a <see langword="class"/>.
+/// Internally delegates to <see cref="ValueAtomicInt"/> for the atomic operations.
 /// </summary>
-public struct AtomicInt
+public sealed class AtomicInt
 {
-    private int _value;
+    private ValueAtomicInt _value;
 
     /// <summary>
     /// Initializes a new <see cref="AtomicInt"/> with an optional initial value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public AtomicInt(int initialValue = 0) => _value = initialValue;
+    public AtomicInt(int initialValue = 0)
+    {
+        _value = new ValueAtomicInt(initialValue);
+    }
 
     /// <summary>
     /// Gets or sets the current value.
@@ -28,62 +27,60 @@ public struct AtomicInt
     public int Value
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Volatile.Read(ref _value);
+        get => _value.Value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set => Interlocked.Exchange(ref _value, value);
+        set => _value.Value = value;
     }
 
     /// <summary>
     /// Reads the current value using acquire semantics.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int Read() => Volatile.Read(ref _value);
+    public int Read() => _value.Read();
 
     /// <summary>
     /// Writes the value atomically.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Write(int value) => Interlocked.Exchange(ref _value, value);
+    public void Write(int value) => _value.Write(value);
 
     /// <summary>
     /// Atomically replaces the current value with <paramref name="value"/> and returns the previous value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int Exchange(int value) => Interlocked.Exchange(ref _value, value);
+    public int Exchange(int value) => _value.Exchange(value);
 
     /// <summary>
     /// Atomically sets the value to <paramref name="value"/> if the current value equals <paramref name="comparand"/>.
     /// Returns the original value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int CompareExchange(int value, int comparand) =>
-        Interlocked.CompareExchange(ref _value, value, comparand);
+    public int CompareExchange(int value, int comparand) => _value.CompareExchange(value, comparand);
 
     /// <summary>
     /// Attempts to set the value to <paramref name="value"/> if the current value equals <paramref name="comparand"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryCompareExchange(int value, int comparand) =>
-        Interlocked.CompareExchange(ref _value, value, comparand) == comparand;
+    public bool TryCompareExchange(int value, int comparand) => _value.TryCompareExchange(value, comparand);
 
     /// <summary>
     /// Atomically increments the value and returns the incremented value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int Increment() => Interlocked.Increment(ref _value);
+    public int Increment() => _value.Increment();
 
     /// <summary>
     /// Atomically decrements the value and returns the decremented value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int Decrement() => Interlocked.Decrement(ref _value);
+    public int Decrement() => _value.Decrement();
 
     /// <summary>
     /// Atomically adds <paramref name="delta"/> and returns the resulting value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int Add(int delta) => Interlocked.Add(ref _value, delta);
+    public int Add(int delta) => _value.Add(delta);
 
     // ---- Get-and (returns previous) ----
 
@@ -91,19 +88,19 @@ public struct AtomicInt
     /// Atomically increments the value and returns the previous value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int GetAndIncrement() => Interlocked.Increment(ref _value) - 1;
+    public int GetAndIncrement() => _value.GetAndIncrement();
 
     /// <summary>
     /// Atomically decrements the value and returns the previous value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int GetAndDecrement() => Interlocked.Decrement(ref _value) + 1;
+    public int GetAndDecrement() => _value.GetAndDecrement();
 
     /// <summary>
     /// Atomically adds <paramref name="delta"/> and returns the previous value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int GetAndAdd(int delta) => Interlocked.Add(ref _value, delta) - delta;
+    public int GetAndAdd(int delta) => _value.GetAndAdd(delta);
 
     // ---- And-get (returns current) ----
 
@@ -111,19 +108,19 @@ public struct AtomicInt
     /// Atomically adds <paramref name="delta"/> and returns the resulting value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int AddAndGet(int delta) => Interlocked.Add(ref _value, delta);
+    public int AddAndGet(int delta) => _value.AddAndGet(delta);
 
     /// <summary>
     /// Atomically increments the value and returns the resulting value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int IncrementAndGet() => Interlocked.Increment(ref _value);
+    public int IncrementAndGet() => _value.IncrementAndGet();
 
     /// <summary>
     /// Atomically decrements the value and returns the resulting value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int DecrementAndGet() => Interlocked.Decrement(ref _value);
+    public int DecrementAndGet() => _value.DecrementAndGet();
 
     // ---- Conditional set helpers ----
 
@@ -131,134 +128,49 @@ public struct AtomicInt
     /// Attempts to set the value to <paramref name="value"/> if it is greater than the current value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TrySetIfGreater(int value)
-    {
-        int current = Volatile.Read(ref _value);
-        if (value <= current)
-            return false;
-
-        return Interlocked.CompareExchange(ref _value, value, current) == current;
-    }
+    public bool TrySetIfGreater(int value) => _value.TrySetIfGreater(value);
 
     /// <summary>
     /// Attempts to set the value to <paramref name="value"/> if it is less than the current value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TrySetIfLess(int value)
-    {
-        int current = Volatile.Read(ref _value);
-        if (value >= current)
-            return false;
-
-        return Interlocked.CompareExchange(ref _value, value, current) == current;
-    }
+    public bool TrySetIfLess(int value) => _value.TrySetIfLess(value);
 
     /// <summary>
     /// Sets the value to <paramref name="value"/> if it is greater than the current value, returning the effective value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int SetIfGreater(int value)
-    {
-        var spin = new SpinWait();
-
-        while (true)
-        {
-            int current = Volatile.Read(ref _value);
-            if (value <= current)
-                return current;
-
-            int prior = Interlocked.CompareExchange(ref _value, value, current);
-            if (prior == current)
-                return value;
-
-            spin.SpinOnce();
-        }
-    }
+    public int SetIfGreater(int value) => _value.SetIfGreater(value);
 
     /// <summary>
     /// Sets the value to <paramref name="value"/> if it is less than the current value, returning the effective value.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int SetIfLess(int value)
-    {
-        var spin = new SpinWait();
-
-        while (true)
-        {
-            int current = Volatile.Read(ref _value);
-            if (value >= current)
-                return current;
-
-            int prior = Interlocked.CompareExchange(ref _value, value, current);
-            if (prior == current)
-                return value;
-
-            spin.SpinOnce();
-        }
-    }
+    public int SetIfLess(int value) => _value.SetIfLess(value);
 
     // ---- CAS-loop transforms ----
 
     /// <summary>
     /// Atomically applies <paramref name="update"/> in a CAS loop and returns the updated value.
     /// </summary>
-    public int Update(Func<int, int> update)
-    {
-        if (update is null)
-            throw new ArgumentNullException(nameof(update));
-
-        var spin = new SpinWait();
-
-        while (true)
-        {
-            int original = Volatile.Read(ref _value);
-            int next = update(original);
-
-            int prior = Interlocked.CompareExchange(ref _value, next, original);
-            if (prior == original)
-                return next;
-
-            spin.SpinOnce();
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Update(Func<int, int> update) => _value.Update(update);
 
     /// <summary>
     /// Atomically combines the current value with <paramref name="x"/> using <paramref name="accumulator"/>
     /// in a CAS loop and returns the resulting value.
     /// </summary>
-    public int Accumulate(int x, Func<int, int, int> accumulator)
-    {
-        if (accumulator is null)
-            throw new ArgumentNullException(nameof(accumulator));
-
-        var spin = new SpinWait();
-
-        while (true)
-        {
-            int original = Volatile.Read(ref _value);
-            int next = accumulator(original, x);
-
-            int prior = Interlocked.CompareExchange(ref _value, next, original);
-            if (prior == original)
-                return next;
-
-            spin.SpinOnce();
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Accumulate(int x, Func<int, int, int> accumulator) => _value.Accumulate(x, accumulator);
 
     /// <summary>
-    /// Attempts to set the value to <paramref name="value"/> if the current value
-    /// equals <paramref name="expected"/>.
+    /// Attempts to set the value to <paramref name="value"/> if the current value equals <paramref name="expected"/>.
     /// </summary>
-    /// <returns>
-    /// <see langword="true"/> if the value was updated; otherwise <see langword="false"/>.
-    /// </returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TrySet(int value, int expected)
-        => Interlocked.CompareExchange(ref _value, value, expected) == expected;
+    public bool TrySet(int value, int expected) => _value.TrySet(value, expected);
 
     /// <summary>
     /// Returns a string representation of the current value.
     /// </summary>
-    public override string ToString() => Volatile.Read(ref _value).ToString();
+    public override string ToString() => _value.ToString();
 }
