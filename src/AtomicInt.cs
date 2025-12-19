@@ -223,20 +223,6 @@ public struct AtomicInt
     }
 
     /// <summary>
-    /// Attempts to apply <paramref name="update"/> once. Returns <see langword="true"/> on success.
-    /// </summary>
-    public bool TryUpdate(Func<int, int> update, out int original, out int updated)
-    {
-        if (update is null)
-            throw new ArgumentNullException(nameof(update));
-
-        original = Volatile.Read(ref _value);
-        updated = update(original);
-
-        return Interlocked.CompareExchange(ref _value, updated, original) == original;
-    }
-
-    /// <summary>
     /// Atomically combines the current value with <paramref name="x"/> using <paramref name="accumulator"/>
     /// in a CAS loop and returns the resulting value.
     /// </summary>
@@ -259,6 +245,17 @@ public struct AtomicInt
             spin.SpinOnce();
         }
     }
+
+    /// <summary>
+    /// Attempts to set the value to <paramref name="value"/> if the current value
+    /// equals <paramref name="expected"/>.
+    /// </summary>
+    /// <returns>
+    /// <see langword="true"/> if the value was updated; otherwise <see langword="false"/>.
+    /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TrySet(int value, int expected)
+        => Interlocked.CompareExchange(ref _value, value, expected) == expected;
 
     /// <summary>
     /// Returns a string representation of the current value.
