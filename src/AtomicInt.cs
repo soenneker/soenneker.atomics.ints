@@ -1,6 +1,7 @@
-﻿using System;
+﻿using Soenneker.Atomics.ValueInts;
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Soenneker.Atomics.ValueInts;
 
 namespace Soenneker.Atomics.Ints;
 
@@ -8,6 +9,7 @@ namespace Soenneker.Atomics.Ints;
 /// A lightweight atomic <see cref="int"/> wrapper implemented as a <see langword="class"/>.
 /// Internally delegates to <see cref="ValueAtomicInt"/> for the atomic operations.
 /// </summary>
+[DebuggerDisplay("{Value}")]
 public sealed class AtomicInt
 {
     private ValueAtomicInt _value;
