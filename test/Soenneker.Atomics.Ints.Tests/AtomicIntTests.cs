@@ -1,11 +1,10 @@
-﻿using Xunit;
 
 namespace Soenneker.Atomics.Ints.Tests;
 
 public sealed class AtomicIntTests
 {
 
-    [Fact]
+    [Test]
     public void Default()
     {
 
