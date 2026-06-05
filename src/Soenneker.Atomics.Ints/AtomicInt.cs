@@ -14,9 +14,6 @@ public sealed class AtomicInt
 {
     private ValueAtomicInt _value;
 
-    /// <summary>
-    /// Initializes a new <see cref="AtomicInt"/> with an optional initial value.
-    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public AtomicInt(int initialValue = 0)
     {
