@@ -13,6 +13,35 @@ A lightweight atomic `int` wrapper implemented as a `class`. Internally delegate
 dotnet add package Soenneker.Atomics.Ints
 ```
 
+## Usage
+
+```csharp
+using Soenneker.Atomics.Ints;
+
+var activeRequests = new AtomicInt();
+
+int current = activeRequests.Increment();
+try
+{
+    await HandleRequest();
+}
+finally
+{
+    activeRequests.Decrement();
+}
+```
+
+Return values distinguish the get-and-update and update-and-get families:
+
+```csharp
+int previous = counter.GetAndAdd(5);
+int current = counter.AddAndGet(5);
+```
+
+Use `SetIfGreater` or `SetIfLess` for a retrying atomic maximum/minimum update. `TrySetIfGreater` and `TrySetIfLess` attempt one compare-and-exchange only and can return `false` after losing a race; they are appropriate when the caller does not require a retry.
+
+`Update` and `Accumulate` may invoke their delegate more than once while retrying a compare-and-exchange. Keep those delegates fast and free of side effects.
+
 ## What you get
 
 - `AtomicInt` — A lightweight atomic `int` wrapper implemented as a `class`. Internally delegates to `ValueAtomicInt` for the atomic operations.
