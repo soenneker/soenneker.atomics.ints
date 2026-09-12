@@ -1,7 +1,8 @@
-﻿using Soenneker.Atomics.ValueInts;
+using Soenneker.Atomics.ValueInts;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Soenneker.Atomics.Ints;
 
@@ -205,6 +206,29 @@ public sealed class AtomicInt
     /// <returns>true if the requested update was applied; otherwise, false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TrySet(int value, int expected) => _value.TrySet(value, expected);
+
+    /// <summary>
+    /// Atomically transforms the value using caller-supplied state, allowing a static callback without a closure allocation.
+    /// </summary>
+    /// <typeparam name="TState">The type of state supplied to the callback.</typeparam>
+    /// <param name="state">State passed to each invocation.</param>
+    /// <param name="update">A callback that may run multiple times when another writer wins a race.</param>
+    /// <returns>The successfully published value.</returns>
+    public int Update<TState>(TState state, Func<int, TState, int> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        var spin = new SpinWait();
+        while (true)
+        {
+            int original = _value.Read();
+            int next = update(original, state);
+            int prior = _value.CompareExchange(next, original);
+            if (prior == original)
+                return next;
+
+            spin.SpinOnce();
+        }
+    }
 
     /// <summary>
     /// Returns a string representation of the current value.
